@@ -230,7 +230,7 @@ def ShowVideos(title, url):
         vid_url = video['canonicalURL']
 
         # catch any bad links that get sent here
-        if not ('/video-clips/') in vid_url and not ('/full-episodes/') in vid_url:
+        if not ('/video-clips/') in vid_url and not ('/full-episodes/') in vid_url and not ('/episodes/') in vid_url:
             continue
 
         thumb = video['images'][0]['url']
