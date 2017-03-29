@@ -245,8 +245,10 @@ def ShowVideos(title, url):
         except:
             try: unix_date = video['publishDate']
             except: unix_date = unix_date = video['date']['originalPublishDate']['timestamp']
-        date = Datetime.FromTimestamp(float(unix_date)).strftime('%m/%d/%Y')
-        date = Datetime.ParseDate(date)
+        if unix_date and unix_date.isdigit():
+            date = Datetime.FromTimestamp(float(unix_date)).strftime('%m/%d/%Y')
+            date = Datetime.ParseDate(date)
+        else: date = None
 
         # Durations for clips have decimal points
         duration = video['duration']
