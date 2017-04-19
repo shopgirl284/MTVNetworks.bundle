@@ -285,9 +285,12 @@ def ShowVideos(title, url):
     else:
         return oc
 #######################################################################################
+# This function produces video results for the shorter special json feeds
 @route(PREFIX + '/othervideos')
+def OtherVideos(title, url, result_type='data'):
 
     oc = ObjectContainer(title2=title)
+    try: videos = JSON.ObjectFromURL(url)['result'][result_type]['items']
     except: return ObjectContainer(header="Empty", message="There are no videos to list right now.")
     
     for video in videos:
