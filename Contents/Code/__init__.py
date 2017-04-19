@@ -55,7 +55,7 @@ def WebsiteMenu(title, url, site_code, thumb=''):
     feed_list = GetFeedList(url)
     for feed in feed_list:
         if '/feeds/ent_m177' in feed:
-            oc.add(DirectoryObject(key=Callback(ShowVideos, title='Most Viewed Videos', url=feed), title='Most Viewed Videos', thumb=thumb))
+            oc.add(DirectoryObject(key=Callback(OtherVideos, title='Most Viewed Videos', url=feed), title='Most Viewed Videos', thumb=thumb))
     return oc
 ####################################################################################################
 # This function pulls the various json feeds for video sections of a page 
@@ -282,6 +282,27 @@ def ShowVideos(title, url):
     if len(oc) < 1:
         Log ('still no value for objects')
         return ObjectContainer(header="Empty", message="There are no unlocked videos available to watch.")
+    else:
+        return oc
+#######################################################################################
+@route(PREFIX + '/othervideos')
+
+    oc = ObjectContainer(title2=title)
+    except: return ObjectContainer(header="Empty", message="There are no videos to list right now.")
+    
+    for video in videos:
+
+        oc.add(EpisodeObject(
+            url = video['url'], 
+            show = video['header'],
+            title = video['title'], 
+            thumb = Resource.ContentsOfURLWithFallback(url=video['image']['url']),
+            originally_available_at = Datetime.ParseDate(video['airDate']),
+            duration = Datetime.MillisecondsFromString(video['duration'])
+        ))
+
+    if len(oc) < 1:
+        return ObjectContainer(header="Empty", message="There are no videos available.")
     else:
         return oc
 ####################################################################################################
