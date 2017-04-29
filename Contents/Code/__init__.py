@@ -4,22 +4,17 @@ PREFIX = '/video/mtvnetworks'
 ART = 'art-default.jpg'
 ICON = 'icon-default.png'
 
-MTV_ICON = 'mtv-icon.png'
-VH1_ICON = 'vh1-icon.png'
-LOGO_ICON = 'logo-icon.png'
-CMT_ICON = 'cmt-icon.png'
-MTV_BASE = 'http://www.mtv.com'
-VH1_BASE = 'http://www.vh1.com'
-LOGOTV_BASE = 'http://www.logotv.com'
-CMT_BASE = 'http://www.cmt.com'
-
-
 RE_MANIFEST_URL = Regex('var triforceManifestURL = "(.+?)";', Regex.DOTALL)
 RE_MANIFEST_FEED = Regex('var triforceManifestFeed = (.+?);\n', Regex.DOTALL)
 
 ENT_LIST = ['ent_m100', 'ent_m150', 'ent_m151', 'ent_m112', 'ent_m116']
-SEARCH ='http://relaunch-search.mtv.com/solr/mtv/select?q=%s&wt=json&start='
-SEARCH_CMT ='http://search.cmt.com/solr/cmt/select?q=%s&wt=json&start='
+
+SHOWS_LIST = [
+    {'title': 'MTV', 'base_url' : 'http://www.mtv.com', 'search_url' : 'http://relaunch-search.mtv.com/solr/mtv/select?q=%s&wt=json&start=', 'site_code' : '_mtv', 'icon' : 'mtv-icon.png'}, 
+    {'title': 'VH1', 'base_url' : 'http://www.vh1.com', 'search_url' : 'http://search.vh1.com/solr/vh1/select?q=%s&wt=json&start=', 'site_code' : '_vh1', 'icon' : 'vh1-icon.png'}, 
+    {'title': 'CMT', 'base_url' : 'http://www.cmt.com', 'search_url' : 'http://search.cmt.com/solr/cmt/select?q=%s&wt=json&start=', 'site_code' : '_cmt', 'icon' : 'cmt-icon.png'}, 
+    {'title': 'LogoTV', 'base_url' : 'http://www.logotv.com', 'search_url' : 'http://search.logotv.com/solr/logo/select?q=%s&wt=json&start=', 'site_code' : '_logo', 'icon' : 'logo-icon.png'}, 
+]
 ###################################################################################################
 # Set up containers for all possible objects
 def Start():
@@ -35,27 +30,36 @@ def Start():
 def MainMenu():
     oc = ObjectContainer()
   
-    oc.add(DirectoryObject(key=Callback(WebsiteMenu, title='MTV', url=MTV_BASE, thumb=R(MTV_ICON), site_code='_mtv'), title='MTV', thumb=R(MTV_ICON)))
-    oc.add(DirectoryObject(key=Callback(WebsiteMenu, title='VH1', url=VH1_BASE, thumb=R(VH1_ICON), site_code='_vh1'), title='VH1', thumb=R(VH1_ICON)))
-    oc.add(DirectoryObject(key=Callback(WebsiteMenu, title='CMT', url=CMT_BASE, thumb=R(CMT_ICON), site_code='_cmt'), title='CMT', thumb=R(CMT_ICON)))
-    oc.add(DirectoryObject(key=Callback(WebsiteMenu, title='LogoTV', url=LOGOTV_BASE, thumb=R(LOGO_ICON), site_code='_logo'), title='LogoTV', thumb=R(LOGO_ICON)))
+    for item in SHOWS_LIST:
+        oc.add(DirectoryObject(
+            key = Callback(
+                WebsiteMenu,
+                title=item['title'],
+                url=item['base_url'],
+                search_url=item['search_url'],
+                site_code=item['site_code'],
+                thumb=R(item['icon'])
+            ),
+            title=item['title'],
+            thumb = R(item['icon'])
+        ))
+
     return oc
+
 ####################################################################################################
 @route(PREFIX + '/websitemenu')
-def WebsiteMenu(title, url, site_code, thumb=''):
+def WebsiteMenu(title, url, site_code, search_url='', thumb=''):
     
     oc = ObjectContainer(title2=title)
     oc.add(DirectoryObject(key=Callback(FeedMenu, title='Shows', url=url+'/shows', thumb=thumb, site_code=site_code), title='Shows', thumb=thumb))
     oc.add(DirectoryObject(key=Callback(FeedMenu, title='Full Episodes', url=url+'/full-episodes', thumb=thumb, site_code=site_code), title='Full Episodes', thumb=thumb))
     if 'MTV' in title:
         oc.add(DirectoryObject(key=Callback(FeedMenu, title='MTV2 Shows', url=url+'/mtv2', thumb=thumb, site_code=site_code), title='MTV2 Shows', thumb=thumb))
-        oc.add(InputDirectoryObject(key = Callback(SearchSections, title="Search", search_url=SEARCH), title = "Search", thumb=thumb))
-    if 'CMT' in title:
-        oc.add(InputDirectoryObject(key = Callback(SearchSections, title="Search", search_url=SEARCH_CMT), title = "Search", thumb=thumb))
+    oc.add(InputDirectoryObject(key = Callback(SearchSections, title="Search", search_url=search_url, thumb=thumb), title = "Search", thumb=thumb))
     feed_list = GetFeedList(url)
     for feed in feed_list:
         if '/feeds/ent_m177' in feed:
-            oc.add(DirectoryObject(key=Callback(ShowVideos, title='Most Viewed Videos', url=feed), title='Most Viewed Videos', thumb=thumb))
+            oc.add(DirectoryObject(key=Callback(OtherVideos, title='Most Viewed Videos', url=feed), title='Most Viewed Videos', thumb=thumb))
     return oc
 ####################################################################################################
 # This function pulls the various json feeds for video sections of a page 
@@ -83,18 +87,19 @@ def FeedMenu(title, url, thumb='', site_code=''):
         if ent_code=='ent_m151':
             oc.add(DirectoryObject(key=Callback(ShowVideos, title=title, url=json_feed),
                 title=title,
-                thumb=Resource.ContentsOfURLWithFallback(url=thumb)
+                thumb=thumb
             ))
             for item in json['result']['shows']:
                 oc.add(DirectoryObject(key=Callback(ShowVideos, title=item['title'], url=item['url']),
-                    title=item['title']
+                    title=item['title'],
+                    thumb=thumb
                 ))
         # Create menu items for those that need to go to Produce Sections
         # ent_m100-featured show and ent_m150-all shows
         else:
             oc.add(DirectoryObject(key=Callback(ProduceSection, title=title, url=json_feed, result_type='shows'),
                 title=title,
-                thumb=Resource.ContentsOfURLWithFallback(url=thumb)
+                thumb=thumb
             ))
             
     if len(oc) < 1:
@@ -183,6 +188,8 @@ def ProduceSection(title, url, result_type, thumb='', alpha=''):
                     continue
                 try: thumb = item['images'][0]['url']
                 except: thumb = thumb
+                if thumb.startswith('//'):
+                    thumb = 'http:' + thumb
                 oc.add(DirectoryObject(
                     key=Callback(ShowSections, title=item['title'], url=url, thumb=thumb),
                     title=item['title'],
@@ -284,9 +291,33 @@ def ShowVideos(title, url):
         return ObjectContainer(header="Empty", message="There are no unlocked videos available to watch.")
     else:
         return oc
+#######################################################################################
+# This function produces video results for the shorter special json feeds
+@route(PREFIX + '/othervideos')
+def OtherVideos(title, url, result_type='data'):
+
+    oc = ObjectContainer(title2=title)
+    try: videos = JSON.ObjectFromURL(url)['result'][result_type]['items']
+    except: return ObjectContainer(header="Empty", message="There are no videos to list right now.")
+    
+    for video in videos:
+
+        oc.add(EpisodeObject(
+            url = video['url'], 
+            show = video['header'],
+            title = video['title'], 
+            thumb = Resource.ContentsOfURLWithFallback(url=video['image']['url']),
+            originally_available_at = Datetime.ParseDate(video['airDate']),
+            duration = Datetime.MillisecondsFromString(video['duration'])
+        ))
+
+    if len(oc) < 1:
+        return ObjectContainer(header="Empty", message="There are no videos available.")
+    else:
+        return oc
 ####################################################################################################
 @route(PREFIX + '/searchsections')
-def SearchSections(title, search_url, query):
+def SearchSections(title, search_url, query, thumb):
     
     oc = ObjectContainer(title2=title)
     json_url = search_url %(String.Quote(query, usePlus = False))
@@ -297,7 +328,7 @@ def SearchSections(title, search_url, query):
         if item['bucketName_s'] not in search_list and item['bucketName_s'] not in ['Articles']:
             search_list.append(item['bucketName_s'])
     for item in search_list:
-        oc.add(DirectoryObject(key = Callback(Search, title=item, url=json_url, search_type=item), title = item))
+        oc.add(DirectoryObject(key = Callback(Search, title=item, url=json_url, search_type=item), title = item, thumb=thumb))
 
     return oc
 ####################################################################################################
@@ -331,6 +362,8 @@ def Search(title, url, start=0, search_type=''):
             except: summary = ''
             try: thumb = item['imageUrl_s']
             except: thumb = ''
+            try: duration = Datetime.MillisecondsFromString(item['duration_s'])
+            except: duration = 0
             try: date = Datetime.ParseDate(item['contentDate_dt'])
             except: date = Datetime.Now()
             oc.add(EpisodeObject(
@@ -341,7 +374,7 @@ def Search(title, url, start=0, search_type=''):
                 summary = summary, 
                 season = season, 
                 index = episode, 
-                duration = Datetime.MillisecondsFromString(item['duration_s']), 
+                duration = duration, 
                 originally_available_at = date
             ))
 
