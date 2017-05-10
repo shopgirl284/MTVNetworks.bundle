@@ -168,7 +168,10 @@ def ProduceSection(title, url, result_type, thumb='', alpha=''):
     (section_title, feed_url) = (title, url)
     json = JSON.ObjectFromURL(url)
 
-    item_list = json['result'][result_type]
+    try: item_list = json['result'][result_type]
+    except: 
+        try: item_list = json['result']['data'][result_type]
+        except: item_list = []
     # Create item list for individual sections of alphabet for the All listings
     if '/feeds/ent_m150' in feed_url and alpha:
         item_list = json['result'][result_type][alpha]
@@ -203,9 +206,6 @@ def ProduceSection(title, url, result_type, thumb='', alpha=''):
             if  count==0:
                 continue
             title=item['name']
-            # Skip the All Seasons section for Full Episodes since they include episode summaries that are not videos
-            if 'All Seasons' in title and 'Episode' in section_title:
-                continue
             # Add All to Full Episodes section
             if 'Episode' in title:
                 title='All ' +   title
@@ -230,11 +230,16 @@ def ShowVideos(title, url):
     oc = ObjectContainer(title2=title)
     json = JSON.ObjectFromURL(url)
     try: videos = json['result']['items']
-    except: return ObjectContainer(header="Empty", message="There are no videos to list right now.")
+    except: 
+        # Some full episode feeds now put media items in a data group
+        try: videos = json['result']['data']['items']
+        except: return ObjectContainer(header="Empty", message="There are no videos to list right now.")
     
     for video in videos:
 
-        vid_url = video['canonicalURL']
+        # some items are just ads so skip any without a URL
+        try: vid_url = video['canonicalURL']
+        except: continue
 
         # catch any bad links that get sent here
         if not ('/video-clips/') in vid_url and not ('/full-episodes/') in vid_url and not ('/episodes/') in vid_url:
