@@ -271,7 +271,7 @@ def ShowVideos(title, url):
         except:
             try: thumb = video['image'][0]['url']
             except:  thumb = None
-        if thumb.startswith('//'):
+        if thumb and thumb.startswith('//'):
             thumb = 'http:' + thumb
 
         # Show names for Individual shows are under show/title and full episode feeds are under showTitle
@@ -288,20 +288,23 @@ def ShowVideos(title, url):
             except: season = 0
         
         # Dates for Individual shows are unix and full episode feeds are strings
-        raw_date = video['airDate']
-        Log('the value of raw_date is %s' %raw_date)
+        try: raw_date = video['airDate']
+        except: raw_date = video['publishDate']
         if raw_date and raw_date.isdigit(): 
             raw_date = Datetime.FromTimestamp(float(raw_date)).strftime('%m/%d/%Y')
         date = Datetime.ParseDate(raw_date)
 
         # Duration for Individual shows are integers/floats and full episode feeds are strings
         duration = video['duration']
-        try: duration = Datetime.MillisecondsFromString(duration)
-        except:
-            # Durations for clips have decimal points
-            if not isinstance(duration, int):
-                duration = int(duration.split('.')[0])
-            duration = duration * 1000
+        if duration:
+            if isinstance(duration, int):
+                duration = duration * 1000
+            else:
+                try: duration = Datetime.MillisecondsFromString(duration)
+                except:
+                    # Durations for clips have decimal points
+                    try: duration = int(duration.split('.')[0]) * 1000
+                    except:  duration = 0
 
         # Everything else has episode and show info now
         oc.add(EpisodeObject(
@@ -367,6 +370,7 @@ def OtherVideos(title, url, base_url):
         try: show = video['header']
         except: 
             try: show = video['label']
+            except: show = ''
         oc.add(EpisodeObject(
             url = vid_url, 
             title = video['title'], 
