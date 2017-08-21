@@ -150,13 +150,13 @@ def ShowSections(title, url, thumb=''):
             section_url = base + section_url
         if 'Episode' in section_title or 'Video' in section_title or 'Film' in section_title:
             feed_list = GetFeedList(section_url)
-            # There should only be one feed listed for show video pages
-            if 'ent_m112' in feed_list[0] or 'ent_m116' in feed_list[0]:
-                oc.add(DirectoryObject(
-                    key=Callback(ProduceSection, title=section_title, url=feed_list[0], result_type='filters', thumb=thumb),
-                    title=section_title,
-                    thumb = Resource.ContentsOfURLWithFallback(url=thumb)
-                ))
+            for feed in feed_list:
+                if 'ent_m112' in feed or 'ent_m116' in feed:
+                    oc.add(DirectoryObject(
+                        key=Callback(ProduceSection, title=section_title, url=feed, result_type='filters', thumb=thumb),
+                        title=section_title,
+                        thumb = Resource.ContentsOfURLWithFallback(url=thumb)
+                    ))
         # Create video object for listed special full shows
         elif 'Full Special' in section_title:
             oc.add(VideoClipObject(
